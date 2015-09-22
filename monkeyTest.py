@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__ = 'shikun'
 import os
 import time
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     ll_list = getPhoneMsg(f)
     print(ll_list)
     start_monkey(cmd)
-    time.sleep(120)
+    time.sleep(110)
     geterror(ll_list)
 
 
