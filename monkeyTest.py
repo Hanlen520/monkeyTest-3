@@ -4,13 +4,13 @@ import time
 import re
 
 
-packageName = "com.XXXX.app"
+packageName = "com.tencent.mm"
 logdir = r"d:\jenkins" #留作扩展集成到jenkins
-remote_path = r"\\10.21.101.100\build\android" #服务器地址，可以让开发查看
+# remote_path = r"\\10.21.101.100\build\android" #服务器地址，可以让开发查看
+remote_path = r"d:\android" #服务器地址，可以让开发查看
 os.system('adb shell cat /system/build.prop >D:\jenkins\phone.text') #存放的手机信息
 f = r"D:\jenkins\phone.text" #存放的手机信息
 now1 = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))
-#print"开始执行Monkey命令"
 monkeylogname = logdir + "\\" + now1 + "monkey.log"
 print(monkeylogname)
 cmd = "adb shell monkey -p " + packageName + " -s 500 --ignore-timeouts --monitor-native-crashes -v -v 10000 >>%s" % monkeylogname
@@ -36,8 +36,8 @@ def getPhoneMsg(cmd_log):
 
 #开始脚本测试
 def start_monkey(cmd):
-    ll_list = getPhoneMsg(f)
-    print(ll_list)
+    # ll_list = getPhoneMsg(f)
+    # print(ll_list)
     os.remove(f)
     #print "使用Logcat清空Phone中log"
     os.popen("adb logcat -c")
@@ -52,14 +52,14 @@ def start_monkey(cmd):
     #print"拷贝截屏图片至电脑"
     cmd1 = "adb pull /sdcard/monkey_run.png %s" % logdir
     os.popen(cmd1)
-    print("gai ming")
     oldname = logdir + "\\" + r"monkey_run.png"
     if os.path.exists(oldname):
         print("file is exist")
+        newname = logdir + "\\" + now1 + r"monkey.png"
+        os.rename(oldname, newname)
     else:
         print("file isn't exist")
-    newname = logdir + "\\" + now1 + r"monkey.png"
-    os.rename(oldname, newname)
+
     #print"使用Logcat导出日志"
     # logcatname = logdir + "\\" + now1 + r"logcat.log"
     cmd2 = "adb logcat -d >%s" % logcatname
@@ -68,10 +68,6 @@ def start_monkey(cmd):
     tracesname = logdir + "\\" + now1 + r"traces.log"
     cmd3 = "adb shell cat /data/anr/traces.txt>%s" % tracesname
     os.popen(cmd3)
-
-    time.sleep(2)
-    geterror(ll_list)
-
 ######################
 #获取error,
 # logcatname,
@@ -114,4 +110,10 @@ def geterror(log_list):
     print(u"异常总数为：" + str(count))
     return count
 if __name__ == '__main__':
+    ll_list = getPhoneMsg(f)
+    print(ll_list)
     start_monkey(cmd)
+    time.sleep(120)
+    geterror(ll_list)
+
+
