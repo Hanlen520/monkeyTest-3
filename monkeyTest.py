@@ -3,19 +3,11 @@ __author__ = 'shikun'
 import os
 import time
 import re
+import monkeyConfig
+import matplotlibBase
 
 
-packageName = "com.tencent.mm"
-logdir = r"d:\jenkins" #留作扩展集成到jenkins
-# remote_path = r"\\10.21.101.100\build\android" #服务器地址，可以让开发查看
-remote_path = r"d:\android" #服务器地址，可以让开发查看
-os.system('adb shell cat /system/build.prop >D:\jenkins\phone.text') #存放的手机信息
-f = r"D:\jenkins\phone.text" #存放的手机信息
-now1 = time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime(time.time()))
-monkeylogname = logdir + "\\" + now1 + "monkey.log"
-print(monkeylogname)
-cmd = "adb shell monkey -p " + packageName + " -s 500 --ignore-timeouts --monitor-native-crashes -v -v 10000 >>%s" % monkeylogname
-logcatname = logdir + "\\" + now1 + r"logcat.log"
+
 
 # 得到手机信息
 def getPhoneMsg(cmd_log):
@@ -36,10 +28,8 @@ def getPhoneMsg(cmd_log):
     return l_list
 
 #开始脚本测试
-def start_monkey(cmd):
-    # ll_list = getPhoneMsg(f)
-    # print(ll_list)
-    os.remove(f)
+def start_monkey(cmd, phone_msg_log, logdir, now1, logcatname):
+    # os.remove(phone_msg_log)
     #print "使用Logcat清空Phone中log"
     os.popen("adb logcat -c")
     #print"暂停2秒..."
@@ -74,13 +64,19 @@ def start_monkey(cmd):
 # logcatname,
 # log_list:version,model,brand
 ######################
-def geterror(log_list):
+def geterror(log_list, logcatname, remote_path, now1):
     NullPointer = "java.lang.NullPointerException"
+    NullPointer_count = 0
     IllegalState = "java.lang.IllegalStateException"
+    IllegalState_count = 0
     IllegalArgument = "java.lang.IllegalArgumentException"
+    IllegalArgument_count = 0
     ArrayIndexOutOfBounds = "java.lang.ArrayIndexOutOfBoundsException"
+    ArrayIndexOutOfBounds_count = 0
     RuntimeException = "java.lang.RuntimeException"
+    RuntimeException_count = 0
     SecurityException = "java.lang.SecurityException"
+    SecurityException_count = 0
     f = open(logcatname, "r")
     lines = f.readlines()
     errfile = "%s\error.log" % remote_path
@@ -97,24 +93,44 @@ def geterror(log_list):
     fr.write("\n")
     count = 0
     for line in lines:
+        if re.findall(NullPointer, line):
+            NullPointer_count += 1
+        if re.findall(IllegalState, line):
+            IllegalState_count += 1
+        if re.findall(IllegalArgument, line):
+            IllegalArgument_count += 1
+        if re.findall(ArrayIndexOutOfBounds, line):
+            ArrayIndexOutOfBounds_count += 1
+        if re.findall(RuntimeException, line):
+            RuntimeException_count += 1
+        if re.findall(SecurityException, line):
+            SecurityException_count += 1
+
+         # 这里的日志文件放到服务器去
         if re.findall(NullPointer, line) or re.findall(IllegalState, line) or re.findall(IllegalArgument, line) or \
                 re.findall(ArrayIndexOutOfBounds, line) or re.findall(RuntimeException, line) or re.findall(SecurityException, line):
-                a = lines.index(line)
-                count += 1
-                for var in range(a, a+22):
-                    # 这个22是表示从找到某个出错的信息开始，打印log22行，这个数据你可以根据自己的需要改。基本上22行能把所有的出错有关的log展现出来了。
-                    print(lines[var])
-                    fr.write(lines[var])
-                fr.write("\n")
+            a = lines.index(line)
+            for var in range(a, a+22):
+                # 这个22是表示从找到某个出错的信息开始，打印log22行，这个数据你可以根据自己的需要改。基本上22行能把所有的出错有关的log展现出来了。
+                print(lines[var])
+                fr.write(lines[var])
+            fr.write("\n")
         f.close()
         fr.close()
-    print(u"异常总数为：" + str(count))
+     # #柱形
+    list_arg = [[NullPointer_count, IllegalState_count, IllegalArgument_count, ArrayIndexOutOfBounds_count, RuntimeException_count, SecurityException_count],
+                [NullPointer, IllegalState, IllegalArgument, ArrayIndexOutOfBounds, RuntimeException, SecurityException]]
+    matplotlibBase.mat_bar(list_arg)
     return count
 if __name__ == '__main__':
-    ll_list = getPhoneMsg(f)
-    print(ll_list)
-    start_monkey(cmd)
-    time.sleep(110)
-    geterror(ll_list)
-
-
+    ini_file = r"d:\monkey.ini"
+    if os.path.isfile(ini_file):
+        mc = monkeyConfig.baseReadnin(ini_file)
+        os.system('adb shell cat /system/build.prop >'+mc.get_phone_msg_log()) #存放的手机信息
+        ll_list = getPhoneMsg(mc.get_phone_msg_log())
+        print(ll_list)
+        start_monkey(mc.get_cmd(), mc.get_phone_msg_log(), mc.get_logdir(), mc.get_now(), mc.get_logcatname())
+        time.sleep(110)
+        geterror(ll_list, mc.get_logcatname(), mc.get_remote_path(), mc.now)
+    else:
+        print(u"配置文件不存在"+ini_file)
